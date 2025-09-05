@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pay to Play - Gravilionaire</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg,#0a0a0f 0%,#1a0d2e 50%,#2d1b4e 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+      color: #fff;
+    }
+    .header {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:20px;
+      border-bottom:1px solid rgba(192,132,252,.3);
+      box-shadow:0 1px 20px rgba(192,132,252,.1);
+    }
+    .logo {
+      font-family:'Orbitron', monospace;
+      font-size:24px; font-weight:700; color:#c084fc;
+      text-shadow:0 0 20px rgba(192,132,252,.8);
+    }
+    .wallet-container { 
+      position:relative; 
+      margin-right: 20px; /* Added margin */
+    }
+    .connect-wallet-btn {
+      background:linear-gradient(45deg,#8b5cf6,#a78bfa);
+      color:#fff; border:2px solid rgba(192,132,252,.5);
+      padding:12px 24px; border-radius:50px; font-weight:600;
+      cursor:pointer; transition:.3s;
+      box-shadow:0 4px 15px rgba(139,92,246,.4);
+    }
+    .connect-wallet-btn:hover {
+      transform:translateY(-2px);
+      box-shadow:0 8px 25px rgba(139,92,246,.6);
+    }
+    .dropdown {
+      display:none; position:absolute; right:0; margin-top:10px;
+      background:#1a0d2e; border:1px solid rgba(192,132,252,.4);
+      border-radius:10px; overflow:hidden; z-index:10;
+      width: 180px;
+    }
+    .wallet-container.active .dropdown { display:block; }
+    .dropdown a, .dropdown button {
+      display:block; padding:10px 20px; color:#fff;
+      background:none; border:none; cursor:pointer;
+      text-align:left; text-decoration:none;
+      width: 100%;
+    }
+    .dropdown a:hover, .dropdown button:hover { background:rgba(192,132,252,.2); }
+    .payment-section {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      min-height:80vh; text-align:center; padding:40px 0;
+    }
+    .payment-title {
+      font-family:'Orbitron', monospace;
+      font-size:clamp(2rem,6vw,3.5rem);
+      font-weight:900;
+      background:linear-gradient(45deg,#c933f7,#fff,#f563d8);
+      -webkit-background-clip:text; 
+      -webkit-text-fill-color:transparent;
+      background-clip: text;
+      margin:30px 0;
+    }
+    .payment-buttons { display:flex; gap:30px; flex-wrap:wrap; justify-content:center; }
+    .agree-btn,.disagree-btn {
+      padding:20px 50px; border-radius:50px; font-size:1.1rem;
+      font-weight:700; cursor:pointer; transition:.3s;
+      font-family:'Orbitron', monospace;
+    }
+    .agree-btn { 
+      background:linear-gradient(45deg,#10b981,#34d399); 
+      color:white; border:none; 
+      box-shadow:0 4px 15px rgba(16,185,129,.4);
+    }
+    .agree-btn:hover {
+      transform: translateY(-3px);
+      box-shadow:0 8px 25px rgba(16,185,129,.6);
+    }
+    .disagree-btn { 
+      background:linear-gradient(45deg,#ef4444,#f87171); 
+      color:white; border:none;
+      box-shadow:0 4px 15px rgba(239,68,68,.4);
+    }
+    .disagree-btn:hover {
+      transform: translateY(-3px);
+      box-shadow:0 8px 25px rgba(239,68,68,.6);
+    }
+    .token-info {
+      background:rgba(192,132,252,.05); border:2px solid rgba(192,132,252,.3);
+      border-radius:20px; padding:30px; margin-bottom:30px;
+      max-width:500px; box-shadow:0 0 20px rgba(192,132,252,.2);
+    }
+    .token-amount {
+      font-family:'Orbitron', monospace; font-size:2.5rem; font-weight:900;
+      color:#c084fc;
+    }
+    .token-label { font-size:1.1rem; color:#c084fc; margin:10px 0; }
+    .quiz-info { color:#b8b8d1; font-size:.95rem; }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">GRAVILIONAIRE</div>
+    <div class="wallet-container" id="walletContainer">
+      <button class="connect-wallet-btn" id="connectWalletBtn">🔌 Connect Wallet</button>
+      <div class="dropdown" id="walletDropdown">
+        <a href="/home"> Home</a>
+        <a href="/profile"> Profile</a>
+        <a href="/faucet"> Faucet</a>
+        <a href="/leaderboard"> Leaderboard</a>
+        <a href="#" id="disconnectBtn"> Disconnect</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Payment -->
+  <section class="payment-section">
+    <div class="token-info">
+      <div class="token-amount" id="entryFee">100</div>
+      <div class="token-label">OGMN TOKENS</div>
+      <div class="quiz-info">
+        Required to participate in the quiz challenge.<br>
+        Tokens will be deducted from your wallet upon agreement.
+      </div>
+    </div>
+    <h1 class="payment-title">PAY 100 OGMN TOKENS TO QUIZ?</h1>
+    <div class="payment-buttons">
+      <button class="agree-btn" id="agreeBtn"> I AGREE</button>
+      <button class="disagree-btn" id="disagreeBtn"> I DISAGREE</button>
+    </div>
+  </section>
+
+  <script>
+    let provider, signer, userAddress, config;
+
+    async function initConfig() {
+      if (!config) {
+        try {
+          config = await fetch("/api/config").then(r => r.json());
+        } catch (e) {
+          alert("❌ Could not load game configuration. Please try again later.");
+          throw e;
+        }
+      }
+      if (!config.token || !config.contract) {
+        alert("❌ Invalid config from server.");
+        throw new Error("Config missing token/contract");
+      }
+      return config;
+    }
+
+    async function ensureProvider() {
+      if (!window.ethereum) { alert("Please install MetaMask!"); throw new Error("No wallet"); }
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      signer = provider.getSigner();
+      userAddress = await signer.getAddress();
+    }
+
+    async function connectWallet() {
+      if (!window.ethereum) { alert("Please install MetaMask!"); return; }
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      signer = provider.getSigner();
+      userAddress = await signer.getAddress();
+      localStorage.setItem("wallet", userAddress);
+      updateWalletUI();
+    }
+
+    function disconnectWallet() {
+      localStorage.removeItem("wallet");
+      userAddress = null; provider = null; signer = null;
+      updateWalletUI();
+    }
+
+    function updateWalletUI() {
+      const btn = document.getElementById("connectWalletBtn");
+      if (userAddress) {
+        btn.textContent = "✅ " + userAddress.slice(0,6)+"..."+userAddress.slice(-4);
+        btn.onclick = () => document.getElementById("walletContainer").classList.toggle("active");
+      } else {
+        btn.textContent = "🔌 Connect Wallet";
+        btn.onclick = connectWallet;
+      }
+    }
+
+    async function loadWalletInfo() {
+      await initConfig();
+      const wallet = localStorage.getItem("wallet");
+      if (wallet) {
+        userAddress = wallet;
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        signer = provider.getSigner();
+      }
+      updateWalletUI();
+      document.getElementById("entryFee").textContent = "100";
+    }
+
+    async function handleAgree() {
+      const btn = document.getElementById("agreeBtn");
+      btn.innerHTML = "⏳ PROCESSING...";
+      btn.disabled = true;
+
+      try {
+        await initConfig();
+        await ensureProvider();
+
+        if (!userAddress) await connectWallet();
+
+        const entryFee = ethers.utils.parseUnits("100", 18); // ✅ fixed decimals
+
+        if (!confirm("⚠️ Pay 100 OGMN as entry fee?")) {
+          btn.innerHTML = "I AGREE"; btn.disabled = false; return;
+        }
+
+        const token = new ethers.Contract(config.token.address, [
+          "function approve(address spender,uint256 value) public returns(bool)"
+        ], signer);
+
+        const contract = new ethers.Contract(config.contract, [
+          "function buyTicket() external"
+        ], signer);
+
+        const tx1 = await token.approve(config.contract, entryFee);
+        await tx1.wait();
+
+        const tx2 = await contract.buyTicket();
+        await tx2.wait();
+
+        alert("✅ 100 OGMN deducted! Starting quiz...");
+        btn.innerHTML = "✅ COMPLETED";
+        setTimeout(()=>window.location.href="/game",1500);
+
+      } catch(err) {
+        console.error(err);
+        alert("❌ Transaction failed: "+(err.message||err));
+        btn.innerHTML = "I AGREE";
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function handleDisagree() {
+      alert("❌ Payment cancelled.");
+      setTimeout(()=>window.location.href="/home",1000);
+    }
+
+    document.addEventListener("DOMContentLoaded",()=>{
+      document.getElementById("connectWalletBtn").addEventListener("click", connectWallet);
+      document.getElementById("disconnectBtn").addEventListener("click", disconnectWallet);
+      document.getElementById("agreeBtn").addEventListener("click", handleAgree);
+      document.getElementById("disagreeBtn").addEventListener("click", handleDisagree);
+      loadWalletInfo();
+    });
+  </script>
+</body>
+</html>

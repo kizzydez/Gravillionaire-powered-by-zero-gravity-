@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Profile - Gravilionaire</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #0a0a0f 0%, #1a0d2e 30%, #2d1b4e 70%, #4c1d95 100%);
+      min-height: 100vh; 
+      overflow-x: hidden; 
+      position: relative;
+      color: #fff;
+    }
+
+    /* Background effects */
+    .particles { 
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      width: 100%; 
+      height: 100%; 
+      pointer-events: none; 
+      z-index: 1; 
+    }
+    .particle { 
+      position: absolute; 
+      width: 2px; 
+      height: 2px; 
+      background: #ffd700; 
+      border-radius: 50%; 
+      box-shadow: 0 0 10px #ffd700, 0 0 20px #ffd700, 0 0 30px #ffd700; 
+      animation: float 6s ease-in-out infinite; 
+    }
+    @keyframes float { 
+      0%, 100% { transform: translateY(0) rotate(0); opacity: .3; } 
+      50% { transform: translateY(-20px) rotate(180deg); opacity: 1; } 
+    }
+
+    .container { 
+      position: relative; 
+      z-index: 2; 
+      max-width: 1200px; 
+      margin: 0 auto; 
+      padding: 0 20px; 
+    }
+
+    /* Header */
+    .header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      padding: 20px 0; 
+      border-bottom: 1px solid rgba(192, 132, 252, .3); 
+      box-shadow: 0 1px 20px rgba(192, 132, 252, .1); 
+    }
+    .logo { 
+      font-family: 'Orbitron', monospace; 
+      font-size: 24px; 
+      font-weight: 700; 
+      color: #c084fc; 
+      text-shadow: 0 0 20px rgba(192, 132, 252, .8), 0 0 40px rgba(192, 132, 252, .4); 
+    }
+
+    /* Wallet dropdown - Fixed to match home.html style */
+    .wallet-container { 
+      position: relative; 
+      margin-right: 20px; /* Added margin to match home.html */
+    }
+    .connect-wallet-btn {
+      background: linear-gradient(45deg, #8b5cf6, #a78bfa);
+      color: #fff; 
+      border: 2px solid rgba(192, 132, 252, .5);
+      padding: 12px 24px; 
+      border-radius: 50px; 
+      font-weight: 600;
+      cursor: pointer; 
+      transition: all .3s ease;
+      box-shadow: 0 4px 15px rgba(139, 92, 246, .4), 0 0 20px rgba(192, 132, 252, .2);
+    }
+    .connect-wallet-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(139, 92, 246, .6), 0 0 30px rgba(192, 132, 252, .4);
+      border-color: rgba(192, 132, 252, .8);
+    }
+
+    .dropdown {
+      display: none; 
+      position: absolute; 
+      right: 0; 
+      margin-top: 10px;
+      background: #1a0d2e; 
+      border: 1px solid rgba(192, 132, 252, .4);
+      border-radius: 10px; 
+      overflow: hidden; 
+      z-index: 10;
+      width: 180px;
+    }
+    .wallet-container.active .dropdown { display: block; }
+    .dropdown a, .dropdown button {
+      display: block; 
+      padding: 10px 20px; 
+      color: #fff;
+      background: none; 
+      border: none; 
+      cursor: pointer;
+      text-align: left; 
+      text-decoration: none;
+      width: 100%;
+    }
+    .dropdown a:hover, .dropdown button:hover { background: rgba(192, 132, 252, .2); }
+
+    /* Profile */
+    .profile-container { 
+      padding: 40px 0; 
+      display: grid; 
+      grid-template-columns: 1fr; 
+      gap: 30px; 
+    }
+    
+    .profile-header { 
+      background: linear-gradient(135deg, rgba(192, 132, 252, .1), rgba(139, 92, 246, .05)); 
+      border: 2px solid rgba(192, 132, 252, .4); 
+      border-radius: 25px; 
+      padding: 40px; 
+      text-align: center; 
+      box-shadow: 0 15px 40px rgba(139, 92, 246, .2); 
+    }
+    
+    .profile-avatar { 
+      width: 120px; 
+      height: 120px; 
+      border-radius: 50%; 
+      margin: 0 auto 20px; 
+      background: radial-gradient(circle, #ffd700, #ffed4e, #daa520); 
+      box-shadow: 0 0 40px rgba(255, 215, 0, .8); 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      font-size: 3rem; 
+      animation: profileGlow 3s ease-in-out infinite alternate; 
+    }
+    
+    @keyframes profileGlow { 
+      0% { transform: scale(1); box-shadow: 0 0 40px rgba(255, 215, 0, .8); } 
+      100% { transform: scale(1.05); box-shadow: 0 0 60px rgba(255, 215, 0, 1); } 
+    }
+    
+    .profile-name { 
+      font-family: 'Orbitron', monospace; 
+      font-size: 2rem; 
+      font-weight: 900; 
+      color: #c084fc; 
+      margin-bottom: 10px; 
+      text-shadow: 0 0 20px rgba(192, 132, 252, .8); 
+    }
+    
+    .wallet-info { 
+      color: #b8b8d1; 
+      font-size: 1rem; 
+      margin-bottom: 20px; 
+      word-break: break-all;
+      padding: 0 20px;
+    }
+    
+    .profile-rank { 
+      display: inline-block; 
+      padding: 10px 25px; 
+      border-radius: 25px; 
+      font-weight: 700; 
+      font-size: 1.1rem; 
+      box-shadow: 0 5px 15px rgba(0, 0, 0, .2); 
+      background: rgba(192, 132, 252, .2);
+      border: 1px solid rgba(192, 132, 252, .4);
+    }
+
+    /* Stats */
+    .stats-grid { 
+      display: grid; 
+      grid-template-columns: repeat(2, 1fr); 
+      gap: 20px; 
+    }
+    
+    .stat-card { 
+      background: linear-gradient(135deg, rgba(192, 132, 252, .1), rgba(139, 92, 246, .05)); 
+      border: 2px solid rgba(192, 132, 252, .3); 
+      border-radius: 20px; 
+      padding: 25px; 
+      text-align: center; 
+      transition: .3s; 
+      box-shadow: 0 10px 25px rgba(139, 92, 246, .1); 
+    }
+    
+    .stat-card:hover { 
+      transform: translateY(-5px); 
+      box-shadow: 0 15px 35px rgba(139, 92, 246, .2); 
+      border-color: rgba(192, 132, 252, .6); 
+    }
+    
+    .stat-icon { 
+      font-size: 2.5rem; 
+      margin-bottom: 15px; 
+      display: block; 
+    }
+    
+    .stat-value { 
+      font-family: 'Orbitron', monospace; 
+      font-size: 2rem; 
+      font-weight: 900; 
+      color: #ffd700; 
+      margin-bottom: 10px; 
+      text-shadow: 0 0 15px rgba(255, 215, 0, .6); 
+    }
+    
+    .stat-label { 
+      color: #c084fc; 
+      font-weight: 600; 
+      font-size: 1rem; 
+    }
+
+    /* Logout */
+    .logout-section { 
+      text-align: center; 
+      margin-top: 40px; 
+    }
+    
+    .logout-btn { 
+      background: linear-gradient(45deg, #ef4444, #f87171); 
+      color: white; 
+      border: 2px solid rgba(239, 68, 68, .6); 
+      padding: 15px 40px; 
+      border-radius: 25px; 
+      font-size: 1.1rem; 
+      font-weight: 600; 
+      cursor: pointer; 
+      transition: .3s; 
+      box-shadow: 0 4px 15px rgba(239, 68, 68, .4);
+    }
+
+    @media (max-width: 768px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .profile-header { padding: 25px; }
+      .profile-name { font-size: 1.5rem; }
+      .wallet-info { font-size: 0.9rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Background particles -->
+  <div class="particles" id="particles"></div>
+
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">GRAVILIONAIRE</div>
+      <div class="wallet-container" id="walletContainer">
+        <button class="connect-wallet-btn" id="connectWalletBtn">Connect Wallet</button>
+        <div class="dropdown" id="walletDropdown">
+          <a href="/home">Home</a>
+          <a href="/faucet">Faucet</a>
+          <a href="/leaderboard">Leaderboard</a>
+          <a href="#" id="disconnectBtn">Disconnect</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Profile -->
+    <div class="profile-container">
+      <div class="profile-header">
+        <div class="profile-avatar">👤</div>
+        <h1 class="profile-name" id="profileName">Player</h1>
+        <div class="wallet-info" id="walletInfo">Wallet: Not connected</div>
+        <div class="profile-rank" id="profileRank">🏆 Bronze Player</div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card"><span class="stat-icon">🎮</span><div class="stat-value" id="gamesPlayed">0</div><div class="stat-label">Games Played</div></div>
+        <div class="stat-card"><span class="stat-icon">💰</span><div class="stat-value" id="totalWinnings">0</div><div class="stat-label">Total Winnings</div></div>
+        <div class="stat-card"><span class="stat-icon">🔥</span><div class="stat-value" id="millionStreaks">0</div><div class="stat-label">Million Streaks</div></div>
+        <div class="stat-card"><span class="stat-icon">⚡</span><div class="stat-value" id="successRate">0%</div><div class="stat-label">Success Rate</div></div>
+      </div>
+
+  <script>
+    // Create particles background
+    function createParticles() {
+      const container = document.getElementById('particles');
+      if (!container) return;
+      
+      for (let i = 0; i < 50; i++) {
+        const particle = document.createElement('div');
+        particle.classList.add('particle');
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.top = Math.random() * 100 + '%';
+        particle.style.animationDelay = Math.random() * 5 + 's';
+        particle.style.animationDuration = (3 + Math.random() * 5) + 's';
+        container.appendChild(particle);
+      }
+    }
+
+    // Wallet connection and dropdown functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      createParticles();
+      
+      const walletContainer = document.getElementById('walletContainer');
+      const connectBtn = document.getElementById('connectWalletBtn');
+      const dropdown = document.getElementById('walletDropdown');
+      const disconnectBtn = document.getElementById('disconnectBtn');
+      const logoutBtn = document.getElementById('logoutBtn');
+      
+      // Check if wallet is already connected
+      const savedWallet = localStorage.getItem('wallet');
+      if (savedWallet) {
+        updateWalletButton(savedWallet);
+        loadProfileData(savedWallet);
+      }
+      
+      // Toggle dropdown
+      connectBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        
+        // If not connected, connect wallet
+        if (!savedWallet) {
+          connectWallet();
+          return;
+        }
+        
+        // If connected, toggle dropdown
+        walletContainer.classList.toggle('active');
+      });
+      
+      // Close dropdown when clicking outside
+      document.addEventListener('click', function(e) {
+        if (!walletContainer.contains(e.target)) {
+          walletContainer.classList.remove('active');
+        }
+      });
+      
+      // Disconnect wallet
+      disconnectBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        localStorage.removeItem('wallet');
+        walletContainer.classList.remove('active');
+        connectBtn.textContent = 'Connect Wallet';
+        resetProfileData();
+        alert('Wallet disconnected');
+      });
+      
+      // Connect wallet function
+      async function connectWallet() {
+        try {
+          if (typeof window.ethereum === 'undefined') {
+            alert('Please install MetaMask or another Ethereum wallet!');
+            return;
+          }
+          
+          // Request account access
+          const accounts = await window.ethereum.request({ 
+            method: 'eth_requestAccounts' 
+          });
+          
+          if (accounts.length > 0) {
+            const walletAddress = accounts[0];
+            localStorage.setItem('wallet', walletAddress);
+            updateWalletButton(walletAddress);
+            loadProfileData(walletAddress);
+            alert('Wallet connected successfully!');
+          }
+        } catch (error) {
+          console.error('Error connecting wallet:', error);
+          alert('Failed to connect wallet: ' + error.message);
+        }
+      }
+      
+      // Update wallet button with truncated address
+      function updateWalletButton(address) {
+        const truncated = `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+        connectBtn.textContent = `✅ ${truncated}`;
+      }
+      
+      // Load profile data from server
+      async function loadProfileData(walletAddress) {
+        try {
+          document.getElementById('walletInfo').textContent = `Wallet: ${walletAddress}`;
+          document.getElementById('profileName').textContent = `Player ${walletAddress.slice(2, 6).toUpperCase()}`;
+          
+          const response = await fetch(`/api/profile/${walletAddress}`);
+          const data = await response.json();
+          
+          if (data.ok) {
+            document.getElementById('gamesPlayed').textContent = data.games || 0;
+            document.getElementById('totalWinnings').textContent = `${data.winnings || 0} OGMN`;
+            document.getElementById('millionStreaks').textContent = (data.winnings >= 1000000 ? 1 : 0);
+            
+            // Calculate success rate
+            const successRate = data.games > 0 ? Math.round((data.winnings / (data.games * 100)) * 100) : 0;
+            document.getElementById('successRate').textContent = `${successRate}%`;
+            
+            // Set tier
+            const tier = data.tier || 'bronze';
+            document.getElementById('profileRank').textContent = `🏆 ${tier.charAt(0).toUpperCase() + tier.slice(1)} Player`;
+          } else {
+            console.error('Failed to load profile data:', data.error);
+          }
+        } catch (error) {
+          console.error('Error loading profile data:', error);
+          // Set default values if API fails
+          document.getElementById('gamesPlayed').textContent = '0';
+          document.getElementById('totalWinnings').textContent = '0 OGMN';
+          document.getElementById('millionStreaks').textContent = '0';
+          document.getElementById('successRate').textContent = '0%';
+          document.getElementById('profileRank').textContent = '🏆 Bronze Player';
+        }
+      }
+      
+      // Reset profile data when disconnected
+      function resetProfileData() {
+        document.getElementById('walletInfo').textContent = 'Wallet: Not connected';
+        document.getElementById('profileName').textContent = 'Player';
+        document.getElementById('gamesPlayed').textContent = '0';
+        document.getElementById('totalWinnings').textContent = '0 OGMN';
+        document.getElementById('millionStreaks').textContent = '0';
+        document.getElementById('successRate').textContent = '0%';
+        document.getElementById('profileRank').textContent = '🏆 Bronze Player';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Leaderboard - Gravilionaire</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #0a0a0f 0%, #1a0d2e 30%, #2d1b4e 70%, #4c1d95 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+      color: #fff;
+    }
+
+    /* Background effects */
+    .particles { 
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      width: 100%; 
+      height: 100%; 
+      pointer-events: none; 
+      z-index: 1; 
+    }
+    .particle { 
+      position: absolute; 
+      width: 2px; 
+      height: 2px; 
+      background: #ffd700; 
+      border-radius: 50%; 
+      box-shadow: 0 0 10px #ffd700, 0 0 20px #ffd700, 0 0 30px #ffd700; 
+      animation: float 6s ease-in-out infinite; 
+    }
+    @keyframes float { 
+      0%, 100% { transform: translateY(0) rotate(0); opacity: .3; } 
+      50% { transform: translateY(-20px) rotate(180deg); opacity: 1; } 
+    }
+
+    .container { 
+      position: relative; 
+      z-index: 2; 
+      max-width: 1200px; 
+      margin: 0 auto; 
+      padding: 0 20px; 
+    }
+
+    /* Header */
+    .header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      padding: 20px 0; 
+      border-bottom: 1px solid rgba(192, 132, 252, .3); 
+      box-shadow: 0 1px 20px rgba(192, 132, 252, .1); 
+    }
+    .logo { 
+      font-family: 'Orbitron', monospace; 
+      font-size: 24px; 
+      font-weight: 700; 
+      color: #c084fc; 
+      text-shadow: 0 0 20px rgba(192, 132, 252, .8), 0 0 40px rgba(192, 132, 252, .4); 
+    }
+
+    /* Wallet dropdown - Fixed to match home.html style */
+    .wallet-container { 
+      position: relative; 
+      margin-right: 20px; /* Added margin to match home.html */
+    }
+    .connect-wallet-btn {
+      background: linear-gradient(45deg, #8b5cf6, #a78bfa);
+      color: #fff; 
+      border: 2px solid rgba(192, 132, 252, .5);
+      padding: 12px 24px; 
+      border-radius: 50px; 
+      font-weight: 600;
+      cursor: pointer; 
+      transition: all .3s ease;
+      box-shadow: 0 4px 15px rgba(139, 92, 246, .4), 0 0 20px rgba(192, 132, 252, .2);
+    }
+    .connect-wallet-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(139, 92, 246, .6), 0 0 30px rgba(192, 132, 252, .4);
+      border-color: rgba(192, 132, 252, .8);
+    }
+
+    .dropdown {
+      display: none; 
+      position: absolute; 
+      right: 0; 
+      margin-top: 10px;
+      background: #1a0d2e; 
+      border: 1px solid rgba(192, 132, 252, .4);
+      border-radius: 10px; 
+      overflow: hidden; 
+      z-index: 10;
+      width: 180px;
+    }
+    .wallet-container.active .dropdown { display: block; }
+    .dropdown a, .dropdown button {
+      display: block; 
+      padding: 10px 20px; 
+      color: #fff;
+      background: none; 
+      border: none; 
+      cursor: pointer;
+      text-align: left; 
+      text-decoration: none;
+      width: 100%;
+    }
+    .dropdown a:hover, .dropdown button:hover { background: rgba(192, 132, 252, .2); }
+
+    /* Leaderboard */
+    .leaderboard-container { padding: 40px 0; }
+    
+    .leaderboard-header { 
+      text-align: center; 
+      margin-bottom: 40px; 
+      background: linear-gradient(135deg, rgba(255, 215, 0, .1), rgba(255, 237, 78, .05)); 
+      border: 2px solid rgba(255, 215, 0, .4); 
+      border-radius: 25px; 
+      padding: 40px;
+    }
+    
+    .leaderboard-title { 
+      font-family: 'Orbitron', monospace; 
+      font-size: 3rem; 
+      font-weight: 900; 
+      color: #ffd700; 
+      margin-bottom: 15px; 
+      text-shadow: 0 0 30px rgba(255, 215, 0, .8); 
+    }
+    
+    .leaderboard-subtitle { 
+      color: #c084fc; 
+      font-size: 1.2rem; 
+      font-weight: 600; 
+    }
+
+    /* Leaderboard table */
+    .leaderboard-table { 
+      background: linear-gradient(135deg, rgba(192, 132, 252, .1), rgba(139, 92, 246, .05)); 
+      border: 2px solid rgba(192, 132, 252, .3); 
+      border-radius: 20px; 
+      overflow: hidden;
+    }
+    
+    .table-header { 
+      background: linear-gradient(135deg, rgba(192, 132, 252, .2), rgba(139, 92, 246, .1)); 
+      padding: 20px; 
+      display: grid; 
+      grid-template-columns: 80px 60px 1fr 120px 120px 150px; 
+      gap: 20px; 
+      font-weight: 700; 
+      color: #c084fc;
+    }
+    
+    .table-body { 
+      max-height: 600px; 
+      overflow-y: auto;
+    }
+    
+    .player-row { 
+      padding: 15px 20px; 
+      display: grid; 
+      grid-template-columns: 80px 60px 1fr 120px 120px 150px; 
+      gap: 20px; 
+      align-items: center; 
+      border-bottom: 1px solid rgba(192, 132, 252, .1); 
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .player-row:hover { 
+      background: rgba(192, 132, 252, .1); 
+      transform: translateX(5px);
+    }
+    
+    .player-row.current-user { 
+      background: rgba(255, 215, 0, .1); 
+      border: 1px solid rgba(255, 215, 0, .3);
+    }
+    
+    .rank-number { 
+      font-family: 'Orbitron', monospace; 
+      font-size: 1.2rem; 
+      font-weight: 700; 
+      color: #ffd700;
+    }
+    
+    .player-avatar-small { 
+      width: 40px; 
+      height: 40px; 
+      border-radius: 50%; 
+      background: linear-gradient(45deg, #8b5cf6, #a78bfa); 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      color: #fff;
+    }
+    
+    .player-name { 
+      color: #fff; 
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    
+    .player-wallet { 
+      color: #b8b8d1; 
+      font-size: .8rem; 
+      font-family: 'Orbitron', monospace;
+    }
+    
+    .player-tier { 
+      padding: 4px 8px; 
+      border-radius: 8px; 
+      font-size: .7rem; 
+      font-weight: 600;
+      text-align: center;
+    }
+    
+    .tier-diamond { background: linear-gradient(45deg, #b9f2ff, #87ceeb); color: #1a0d2e; }
+    .tier-gold { background: linear-gradient(45deg, #ffd700, #ffed4e); color: #1a0d2e; }
+    .tier-silver { background: linear-gradient(45deg, #c0c0c0, #e5e5e5); color: #1a0d2e; }
+    .tier-bronze { background: linear-gradient(45deg, #cd7f32, #d4af37); color: #1a0d2e; }
+    
+    .wins-count { 
+      font-family: 'Orbitron', monospace; 
+      font-size: 1.1rem; 
+      font-weight: 700; 
+      color: #10b981;
+    }
+    
+    .total-payout { 
+      font-family: 'Orbitron', monospace; 
+      font-size: 1.1rem; 
+      font-weight: 700; 
+      color: #ffd700;
+    }
+
+    .loading { 
+      text-align: center; 
+      padding: 40px; 
+      color: #c084fc;
+      font-size: 1.1rem;
+    }
+    
+    .loading-spinner { 
+      width: 40px; 
+      height: 40px; 
+      border: 4px solid rgba(192, 132, 252, .3); 
+      border-top: 4px solid #c084fc; 
+      border-radius: 50%; 
+      animation: spin 1s linear infinite; 
+      margin: 0 auto 20px;
+    }
+    
+    @keyframes spin { 
+      0% { transform: rotate(0deg); } 
+      100% { transform: rotate(360deg); } 
+    }
+
+    @media (max-width: 768px) {
+      .table-header, .player-row {
+        grid-template-columns: 60px 50px 1fr 100px 100px 120px;
+        gap: 10px;
+        padding: 10px 15px;
+      }
+      
+      .leaderboard-title {
+        font-size: 2rem;
+      }
+      
+      .leaderboard-header {
+        padding: 25px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Background particles -->
+  <div class="particles" id="particles"></div>
+
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">GRAVILIONAIRE</div>
+      <div class="wallet-container" id="walletContainer">
+        <button class="connect-wallet-btn" id="connectWalletBtn">Connect Wallet</button>
+        <div class="dropdown" id="walletDropdown">
+          <a href="/home">Home</a>
+          <a href="/profile">Profile</a>
+          <a href="/faucet">Faucet</a>
+          <a href="#" id="disconnectBtn">Disconnect</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Leaderboard -->
+    <div class="leaderboard-container">
+      <div class="leaderboard-header">
+        <h1 class="leaderboard-title">🏆 LEADERBOARD</h1>
+        <p class="leaderboard-subtitle">Top 100 Gravilionaire Champions</p>
+      </div>
+
+      <div class="leaderboard-table">
+        <div class="table-header">
+          <div>Rank</div>
+          <div>Avatar</div>
+          <div>Player</div>
+          <div>Tier</div>
+          <div>Games</div>
+          <div>Winnings</div>
+        </div>
+        <div class="table-body" id="leaderboardBody">
+          <div class="loading" id="loadingState">
+            <div class="loading-spinner"></div> 
+            Loading leaderboard...
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Create particles background
+    function createParticles() {
+      const container = document.getElementById('particles');
+      if (!container) return;
+      
+      for (let i = 0; i < 50; i++) {
+        const particle = document.createElement('div');
+        particle.classList.add('particle');
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.top = Math.random() * 100 + '%';
+        particle.style.animationDelay = Math.random() * 5 + 's';
+        particle.style.animationDuration = (3 + Math.random() * 5) + 's';
+        container.appendChild(particle);
+      }
+    }
+
+    // Wallet connection and dropdown functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      createParticles();
+      
+      const walletContainer = document.getElementById('walletContainer');
+      const connectBtn = document.getElementById('connectWalletBtn');
+      const dropdown = document.getElementById('walletDropdown');
+      const disconnectBtn = document.getElementById('disconnectBtn');
+      
+      // Check if wallet is already connected
+      const savedWallet = localStorage.getItem('wallet');
+      if (savedWallet) {
+        updateWalletButton(savedWallet);
+      }
+      
+      // Toggle dropdown
+      connectBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        
+        // If not connected, connect wallet
+        if (!savedWallet) {
+          connectWallet();
+          return;
+        }
+        
+        // If connected, toggle dropdown
+        walletContainer.classList.toggle('active');
+      });
+      
+      // Close dropdown when clicking outside
+      document.addEventListener('click', function(e) {
+        if (!walletContainer.contains(e.target)) {
+          walletContainer.classList.remove('active');
+        }
+      });
+      
+      // Disconnect wallet
+      disconnectBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        localStorage.removeItem('wallet');
+        walletContainer.classList.remove('active');
+        connectBtn.textContent = 'Connect Wallet';
+        alert('Wallet disconnected');
+      });
+      
+      // Connect wallet function
+      async function connectWallet() {
+        try {
+          if (typeof window.ethereum === 'undefined') {
+            alert('Please install MetaMask or another Ethereum wallet!');
+            return;
+          }
+          
+          // Request account access
+          const accounts = await window.ethereum.request({ 
+            method: 'eth_requestAccounts' 
+          });
+          
+          if (accounts.length > 0) {
+            const walletAddress = accounts[0];
+            localStorage.setItem('wallet', walletAddress);
+            updateWalletButton(walletAddress);
+            alert('Wallet connected successfully!');
+          }
+        } catch (error) {
+          console.error('Error connecting wallet:', error);
+          alert('Failed to connect wallet: ' + error.message);
+        }
+      }
+      
+      // Update wallet button with truncated address
+      function updateWalletButton(address) {
+        const truncated = `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+        connectBtn.textContent = `✅ ${truncated}`;
+      }
+    });
+
+    // Leaderboard functionality
+    let leaderboardData = [];
+    const userAddress = localStorage.getItem('wallet');
+
+    // Tier calculation based on total tokens won
+    function getTier(winnings) {
+      if (winnings >= 1000000) return { name: 'diamond', label: 'DIAMOND' };
+      if (winnings >= 500000) return { name: 'gold', label: 'GOLD' };
+      if (winnings >= 100000) return { name: 'silver', label: 'SILVER' };
+      if (winnings >= 10000) return { name: 'bronze', label: 'BRONZE' };
+      return { name: 'novice', label: 'NOVICE' };
+    }
+
+    async function fetchLeaderboard() {
+      try {
+        const res = await fetch('/api/leaderboard');
+        const data = await res.json();
+        
+        if (data.ok && data.players) {
+          leaderboardData = data.players;
+          renderLeaderboard();
+        } else {
+          throw new Error('Invalid response format');
+        }
+      } catch (e) {
+        document.getElementById('loadingState').textContent = '⚠️ Failed to load leaderboard. Using sample data.';
+        console.error('Error loading leaderboard:', e);
+        // Fallback to sample data
+        leaderboardData = generateSampleData();
+        renderLeaderboard();
+      }
+    }
+
+    function generateSampleData() {
+      const sampleData = [];
+      for (let i = 1; i <= 20; i++) {
+        const winnings = Math.floor(Math.random() * 1500000); // Up to 1.5M for sample data
+        sampleData.push({
+          rank: i,
+          wallet: `0x${Math.random().toString(16).substr(2, 40)}`,
+          wins: Math.floor(Math.random() * 50),
+          payout: winnings
+        });
+      }
+      return sampleData;
+    }
+
+    function renderLeaderboard() {
+      const tbody = document.getElementById('leaderboardBody');
+      tbody.innerHTML = '';
+      
+      if (leaderboardData.length === 0) {
+        tbody.innerHTML = '<div class="loading">No leaderboard data available</div>';
+        return;
+      }
+      
+      leaderboardData.forEach(player => {
+        // Use payout or winnings field based on what the server returns
+        const totalWinnings = player.payout || player.winnings || 0;
+        const tier = getTier(totalWinnings);
+        const isCurrentUser = userAddress && player.wallet.toLowerCase() === userAddress.toLowerCase();
+        
+        const row = document.createElement('div');
+        row.className = `player-row ${isCurrentUser ? 'current-user' : ''}`;
+        row.innerHTML = `
+          <div class="rank-number">#${player.rank}</div>
+          <div class="player-avatar-small">👤</div>
+          <div>
+            <div class="player-name">Player ${player.rank}</div>
+            <div class="player-wallet">${player.wallet.slice(0, 6)}...${player.wallet.slice(-4)}</div>
+          </div>
+          <div class="player-tier tier-${tier.name}">${tier.label}</div>
+          <div class="wins-count">${player.wins || player.games || 0}</div>
+          <div class="total-payout">${Number(totalWinnings).toLocaleString()} OGMN</div>
+        `;
+        
+        row.onclick = () => {
+          window.location.href = `/profile?wallet=${player.wallet}`;
+        };
+        
+        tbody.appendChild(row);
+      });
+      
+      // Remove loading state
+      const loadingState = document.getElementById('loadingState');
+      if (loadingState) {
+        loadingState.style.display = 'none';
+      }
+    }
+
+    window.addEventListener('load', fetchLeaderboard);
+  </script>
+</body>
+</html>

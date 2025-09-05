@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Quiz Game - Gravilionaire</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
+  <style>
+    /* ------------------------ RESET & BASE ------------------------ */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", Arial, sans-serif;
+      color: #E9E7FF;
+      background:
+        radial-gradient(1200px 600px at 20% -10%, #3b0b7a50 0%, transparent 60%),
+        radial-gradient(1200px 600px at 120% 110%, #1f0e9050 0%, transparent 60%),
+        linear-gradient(135deg, #070710 0%, #0e0a1b 35%, #1a1032 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button { font-family: inherit; }
+
+    /* ------------------------ HEADER ------------------------ */
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 0; position: sticky; top: 0; z-index: 50;
+      background: linear-gradient(180deg, rgba(12,10,25,.75), rgba(12,10,25,0));
+      backdrop-filter: blur(6px);
+      border-bottom: 1px solid rgba(128,90,213,.25);
+      box-shadow: 0 6px 30px rgba(128,90,213,.15);
+    }
+    .logo {
+      font-family: 'Orbitron', monospace;
+      letter-spacing: 2px; font-weight: 900; font-size: 24px;
+      color: #caa8ff;
+      text-shadow: 0 0 12px rgba(160,120,255,.6), 0 0 28px rgba(127,90,240,.35);
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+
+    /* Wallet dropdown - Fixed to match home.html style */
+    .wallet-container { 
+      position: relative; 
+      margin-right: 20px; /* Added margin to match home.html */
+    }
+    .connect-wallet-btn {
+      background:linear-gradient(45deg,#8b5cf6,#a78bfa);
+      color:#fff; border:2px solid rgba(192,132,252,.5);
+      padding:12px 24px; border-radius:50px; font-weight:600;
+      cursor:pointer; transition:all .3s ease;
+      box-shadow:0 4px 15px rgba(139,92,246,.4),0 0 20px rgba(192,132,252,.2);
+    }
+    .connect-wallet-btn:hover {
+      transform:translateY(-2px);
+      box-shadow:0 8px 25px rgba(139,92,246,.6),0 0 30px rgba(192,132,252,.4);
+      border-color:rgba(192,132,252,.8);
+    }
+
+    .dropdown {
+      display:none; position:absolute; right:0; margin-top:10px;
+      background:#1a0d2e; border:1px solid rgba(192,132,252,.4);
+      border-radius:10px; overflow:hidden; z-index:10;
+      width: 180px;
+    }
+    .wallet-container.active .dropdown { display:block; }
+    .dropdown a, .dropdown button {
+      display:block; padding:10px 20px; color:#fff;
+      background:none; border:none; cursor:pointer;
+      text-align:left; text-decoration:none;
+      width: 100%;
+    }
+    .dropdown a:hover, .dropdown button:hover { background:rgba(192,132,252,.2); }
+
+    /* ------------------------ GAME LAYOUT ------------------------ */
+    .game-container {
+      margin: 22px auto 40px;
+      display: grid; grid-template-columns: 1.2fr .8fr; gap: 22px;
+    }
+    @media (max-width: 980px) { .game-container { grid-template-columns: 1fr; } }
+
+    .game-area {
+      background: linear-gradient(180deg, rgba(28,18,58,.7), rgba(20,12,38,.75));
+      border: 1px solid rgba(160,120,255,.22);
+      border-radius: 22px; padding: 18px;
+      box-shadow: inset 0 0 60px rgba(110,66,193,.15), 0 20px 60px rgba(64,35,120,.3);
+    }
+
+    .player-section {
+      display: flex; align-items: center; gap: 14px; padding: 10px 6px 16px;
+      border-bottom: 1px dashed rgba(160,120,255,.25);
+    }
+    .player-avatar {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: radial-gradient(80% 80% at 30% 20%, #8b5cf6, #4c1d95 70%);
+      border: 2px solid rgba(160,120,255,.5);
+      box-shadow: 0 8px 30px rgba(139,92,246,.4), inset 0 0 24px rgba(255,255,255,.08);
+      animation: pulseGlow 3s ease-in-out infinite;
+    }
+    @keyframes pulseGlow {
+      0%,100% { box-shadow: 0 8px 30px rgba(139,92,246,.35), inset 0 0 18px rgba(255,255,255,.06); }
+      50% { box-shadow: 0 10px 38px rgba(139,92,246,.55), inset 0 0 26px rgba(255,255,255,.10); }
+    }
+    .player-info h3 { margin: 0; font-weight: 900; letter-spacing: .4px; }
+    .player-info p { opacity: .8; margin: 2px 0 0; }
+
+    .timer-section { display: grid; place-items: center; padding: 16px 0; }
+    .timer {
+      width: 88px; height: 88px; border-radius: 50%;
+      display: grid; place-items: center; font-weight: 900; font-size: 28px; font-family: 'Orbitron', monospace;
+      background:
+        radial-gradient(80% 80% at 30% 20%, rgba(139,92,246,.35), rgba(76,29,149,.25)),
+        conic-gradient(from 0deg, #9f7aea 0%, #7c3aed 40%, #6d28d9 60%, #4c1d95 100%);
+      color: #fff;
+      border: 3px solid rgba(160,120,255,.48);
+      box-shadow: 0 16px 45px rgba(128,90,213,.35), inset 0 0 30px rgba(255,255,255,.05);
+      animation: spinBorder 14s linear infinite;
+    }
+    .timer-label { margin-top: 6px; font-size: 12px; opacity: .75; letter-spacing: .5px; }
+    @keyframes spinBorder { 0% { filter: hue-rotate(0deg) } 100% { filter: hue-rotate(360deg) } }
+
+    .question-section { padding: 16px 10px 6px; }
+    .question-number {
+      font-family: 'Orbitron', monospace; color: #c4b5fd; opacity: .9; margin-bottom: 6px; letter-spacing: .5px;
+    }
+    .question-text {
+      font-size: 22px; /* Medium size for better readability */
+      font-weight: 600; line-height: 1.4; padding: 16px; border-radius: 16px;
+      background: linear-gradient(180deg, rgba(18,10,40,.35), rgba(18,10,40,.15));
+      border: 1px solid rgba(160,120,255,.2);
+      box-shadow: inset 0 0 24px rgba(110,66,193,.18);
+      text-shadow: 0 0 16px rgba(130,100,255,.15);
+    }
+
+    .answers-grid {
+      margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    }
+    @media (max-width: 640px) { .answers-grid { grid-template-columns: 1fr; } }
+
+    .answer-option {
+      display: grid; grid-template-columns: 54px 1fr; align-items: center; gap: 12px;
+      padding: 12px 14px; border-radius: 16px; cursor: pointer;
+      background: linear-gradient(180deg, rgba(25,14,52,.6), rgba(18,10,40,.5));
+      border: 1px solid rgba(160,120,255,.22);
+      box-shadow: 0 10px 26px rgba(94,63,190,.22), inset 0 0 20px rgba(255,255,255,.04);
+      transition: transform .08s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease, filter .18s ease;
+      user-select: none;
+    }
+    .answer-option:hover {
+      transform: translateY(-1px);
+      border-color: rgba(176,146,255,.45);
+      box-shadow: 0 16px 34px rgba(116,86,255,.28);
+    }
+    .answer-option:active { transform: translateY(0); filter: brightness(1.02); }
+    .answer-letter {
+      height: 40px; width: 40px; border-radius: 50%; display: grid; place-items: center;
+      font-weight: 900; font-family: 'Orbitron', monospace;
+      background: radial-gradient(80% 80% at 28% 22%, #9f7aea, #5b21b6 70%);
+      border: 2px solid rgba(176,146,255,.65);
+      box-shadow: 0 8px 26px rgba(116,86,255,.35), inset 0 0 18px rgba(255,255,255,.06);
+    }
+    .answer-option.selected {
+      background: linear-gradient(180deg, rgba(60,32,120,.8), rgba(30,18,62,.7));
+      border-color: rgba(176,146,255,.8);
+      box-shadow: 0 18px 40px rgba(116,86,255,.45), inset 0 0 26px rgba(255,255,255,.08);
+    }
+    .answer-option.correct {
+      background: linear-gradient(180deg, rgba(22,80,55,.85), rgba(18,50,38,.75));
+      border-color: rgba(16,185,129,.9);
+      box-shadow: 0 18px 46px rgba(16,185,129,.45);
+      animation: correctPulse .9s ease 2;
+    }
+    @keyframes correctPulse {
+      0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); }
+    }
+    .answer-option.incorrect {
+      background: linear-gradient(180deg, rgba(90,26,26,.88), rgba(58,16,16,.78));
+      border-color: rgba(239,68,68,.85);
+      box-shadow: 0 16px 40px rgba(239,68,68,.4);
+      animation: shake .35s ease-in-out 2;
+    }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      25% { transform: translateX(-4px); }
+      75% { transform: translateX(4px); }
+    }
+
+    /* ------------------------ PRIZE LADDER & LIFELINES ------------------------ */
+    .prize-ladder {
+      background: linear-gradient(180deg, rgba(22,14,44,.7), rgba(16,10,34,.75));
+      border: 1px solid rgba(160,120,255,.22);
+      border-radius: 22px; padding: 16px;
+      box-shadow: inset 0 0 60px rgba(110,66,193,.13), 0 20px 60px rgba(64,35,120,.25);
+      display: grid; grid-template-rows: auto auto 1fr; gap: 10px;
+      min-height: 520px;
+    }
+
+    .lifelines {
+      display: grid; grid-auto-flow: column; gap: 10px; justify-content: start;
+    }
+    .lifeline {
+      display: inline-grid; place-items: center;
+      width: 44px; height: 44px; border-radius: 12px; cursor: pointer; user-select: none;
+      font-size: 20px;
+      background: linear-gradient(180deg, rgba(30,18,62,.9), rgba(18,10,40,.85));
+      border: 1px solid rgba(176,146,255,.35);
+      box-shadow: 0 10px 26px rgba(94,63,190,.22), inset 0 0 18px rgba(255,255,255,.05);
+      transition: transform .12s ease, box-shadow .18s ease, border-color .18s ease, filter .18s ease;
+      position: relative; overflow: hidden;
+    }
+    .lifeline::after {
+      content: ""; position: absolute; inset: -60% -40% auto -40%;
+      height: 120%; transform: rotate(35deg);
+      background: linear-gradient(90deg, rgba(255,255,255,.08), rgba(255,255,255,0));
+      animation: sweep 3.2s ease-in-out infinite;
+    }
+    @keyframes sweep { 0% { left:-60% } 50% { left: 120% } 100% { left: 120% } }
+    .lifeline:hover { transform: translateY(-2px) scale(1.03); border-color: rgba(176,146,255,.7); }
+    .lifeline.used { filter: grayscale(.9) opacity(.6); pointer-events: none; }
+
+    .ladder-title {
+      text-align: center; font-family: 'Orbitron', monospace; font-weight: 900; letter-spacing: .8px;
+      color: #caa8ff; text-shadow: 0 0 16px rgba(160,120,255,.35);
+      padding-top: 2px;
+    }
+
+    #prizeLadder { display: grid; gap: 6px; align-content: start; padding: 4px 0 2px; }
+    .prize-item {
+      display: grid; grid-template-columns: 36px 1fr; gap: 10px; align-items: center;
+      padding: 8px 12px; border-radius: 12px;
+      background: linear-gradient(180deg, rgba(25,14,52,.5), rgba(18,10,40,.45));
+      border: 1px solid rgba(160,120,255,.2);
+      transition: background .18s ease, border-color .18s ease, transform .12s ease;
+    }
+    .prize-item .prize-number { font-family: 'Orbitron', monospace; opacity: .8; }
+    .prize-item .prize-amount { text-align: right; font-weight: 800; letter-spacing: .5px; }
+    .prize-item.safe {
+      border-color: rgba(234,179,8,.6);
+      box-shadow: inset 0 0 22px rgba(234,179,8,.08);
+    }
+    .prize-item.current {
+      background: linear-gradient(180deg, rgba(60,32,120,.78), rgba(30,18,62,.7));
+      border-color: rgba(176,146,255,.8);
+      box-shadow: 0 12px 28px rgba(116,86,255,.35);
+      transform: scale(1.01);
+    }
+
+    /* ------------------------ MODALS ------------------------ */
+    .modal-overlay {
+      position: fixed; inset: 0; display: none; place-items: center;
+      background: radial-gradient(60% 60% at 50% 50%, rgba(10,8,20,.45), rgba(6,4,14,.85));
+      backdrop-filter: blur(6px); z-index: 100;
+    }
+    .modal-overlay.active { display: grid; }
+    .game-modal {
+      width: min(92vw, 520px);
+      background: linear-gradient(180deg, #1b1238, #120a24);
+      border: 1px solid rgba(160,120,255,.35);
+      box-shadow: 0 20px 70px rgba(116,86,255,.35);
+      border-radius: 18px; padding: 20px 18px 22px;
+      text-align: center;
+      animation: modalPop .32s ease;
+    }
+    @keyframes modalPop {
+      from { transform: translateY(12px) scale(.98); opacity: 0; }
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    .modal-title { font-family: 'Orbitron', monospace; margin: 0 0 6px; }
+    .modal-message { opacity: .85; margin: 2px 0 10px; }
+    .modal-prize {
+      font-family: 'Orbitron', monospace; font-size: 40px; font-weight: 900; color: #a78bfa;
+      text-shadow: 0 0 22px rgba(167,139,250,.55); margin-bottom: 14px;
+    }
+    .modal-buttons { display: grid; grid-auto-flow: row; gap: 10px; }
+    .modal-btn {
+      border: 0; border-radius: 12px; padding: 12px 16px; cursor: pointer; font-weight: 800;
+      color: #0b0616;
+      background: linear-gradient(180deg, #d8b4fe, #a78bfa);
+      transition: transform .12s ease, box-shadow .18s ease, filter .15s ease;
+    }
+    .modal-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(167,139,250,.35); }
+    .modal-btn:active { transform: translateY(0); filter: brightness(.98); }
+
+    /* Audience poll chart */
+    .chart-container {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+      align-items: end; min-height: 180px; margin: 14px 8px 12px;
+      background: linear-gradient(180deg, rgba(24,16,52,.45), rgba(14,8,30,.35));
+      border: 1px dashed rgba(160,120,255,.22);
+      border-radius: 12px; padding: 12px 10px 10px;
+    }
+    .chart-bar { display: grid; grid-template-rows: 1fr auto; align-items: end; gap: 6px; text-align: center; }
+    .bar {
+      width: 100%; height: 0%;
+      background: linear-gradient(180deg, #a78bfa, #7c3aed);
+      border-radius: 8px 8px 2px 2px;
+      box-shadow: 0 10px 26px rgba(139,92,246,.4);
+      transition: height 600ms cubic-bezier(.2,.8,.2,1), filter .18s ease;
+    }
+    .chart-bar span { font-family: 'Orbitron', monospace; opacity: .85; }
+
+    /* ------------------------ UTIL ------------------------ */
+    ::selection { background: rgba(167,139,250,.35); color: #fff; }
+  </style>
+</head>
+<body>
+  <!-- Prep Countdown Modal -->
+  <div class="modal-overlay active" id="prepModal">
+    <div class="game-modal">
+      <h2 class="modal-title">⏳ Get Ready!</h2>
+      <p class="modal-message">The quiz will start in...</p>
+      <div class="modal-prize" id="prepCountdown">6</div>
+    </div>
+  </div>
+
+  <!-- Audience Lifeline Modal -->
+  <div class="modal-overlay" id="audienceModal">
+    <div class="game-modal">
+      <h2 class="modal-title">👥 Audience Poll</h2>
+      <div class="chart-container">
+        <div class="chart-bar"><div class="bar" id="barA"></div><span>A</span></div>
+        <div class="chart-bar"><div class="bar" id="barB"></div><span>B</span></div>
+        <div class="chart-bar"><div class="bar" id="barC"></div><span>C</span></div>
+        <div class="chart-bar"><div class="bar" id="barD"></div><span>D</span></div>
+      </div>
+      <button class="modal-btn" onclick="closeAudiencePoll()">OK</button>
+    </div>
+  </div>
+
+  <!-- Game Over Modal -->
+  <div class="modal-overlay" id="gameModal">
+    <div class="game-modal">
+      <h2 class="modal-title" id="modalTitle">Game Over!</h2>
+      <p class="modal-message" id="modalMessage">Better luck next time!</p>
+      <div class="modal-prize" id="modalPrize">0 OGMN</div>
+      <div class="modal-buttons" id="modalButtons"></div>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">GRAVILIONAIRE</div>
+      <div class="wallet-container" id="walletContainer">
+        <button class="connect-wallet-btn" id="connectWalletBtn"> Connect Wallet</button>
+        <div class="dropdown" id="walletDropdown">
+          <a href="/home"> Home</a>
+          <a href="/profile"> Profile</a>
+          <a href="/faucet"> Faucet</a>
+          <a href="/leaderboard"> Leaderboard</a>
+          <a href="#" id="disconnectBtn">Disconnect</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Game Layout -->
+    <div class="game-container">
+      <div class="game-area">
+        <div class="player-section">
+          <div class="player-avatar bronze" id="playerAvatar"></div>
+          <div class="player-info">
+            <h3 id="playerName">Player</h3>
+            <p>Current Question: <span id="currentQuestionDisplay">1</span> of 15</p>
+          </div>
+        </div>
+
+        <div class="timer-section">
+          <div class="timer" id="timer">13</div>
+          <div class="timer-label">Seconds Remaining</div>
+        </div>
+
+        <div class="question-section">
+          <div class="question-number" id="questionNumber">Question 1</div>
+          <div class="question-text" id="questionText">Loading...</div>
+          <div class="answers-grid" id="answersGrid"></div>
+        </div>
+      </div>
+
+      <!-- Lifelines + Prize Ladder -->
+      <div class="prize-ladder">
+        <div class="lifelines">
+          <div class="lifeline" id="fiftyLifeline" onclick="useLifeline('fifty')" title="50/50">⚖️</div>
+          <div class="lifeline" id="phoneLifeline" onclick="useLifeline('phone')" title="Phone a Friend">📞</div>
+          <div class="lifeline" id="audienceLifeline" onclick="useLifeline('audience')" title="Ask the Audience">👥</div>
+        </div>
+        <div class="ladder-title">💰 PRIZE LADDER</div>
+        <div id="prizeLadder"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ------------------------ GAME STATE ------------------------
+    let questions = [];
+    let currentQuestion = 0, selectedAnswer = -1, timerInterval, timeLeft = 13, gameActive = false;
+    const prizes = [100,200,300,500,1000,2000,4000,8000,16000,32000,64000,125000,250000,500000,1000000];
+    const safeHavens = [4,9];
+    let provider, signer, userAddress;
+    let usedLifelines = { fifty:false, phone:false, audience:false };
+
+    function playSound(id){
+      // Sound simulation for localhost
+      console.log("Playing sound:", id);
+    }
+
+    async function ensureWallet(){
+      userAddress = localStorage.getItem("wallet");
+      if(!userAddress){
+        alert("❌ Wallet not connected. Redirecting...");
+        window.location.href="/home";
+      }
+    }
+
+    async function initGame(){
+      await ensureWallet();
+      try{
+        const resp = await fetch("/api/questions/random?count=15");
+        const data = await resp.json();
+        
+        // Handle both response formats
+        if (data.questions) {
+          questions = data.questions;
+        } else if (Array.isArray(data)) {
+          questions = data;
+        } else {
+          throw new Error("Invalid response format");
+        }
+        
+        if(questions.length === 0) {
+          // Fallback to mock questions for localhost testing
+          questions = generateMockQuestions(15);
+        }
+        
+        generatePrizeLadder();
+        startPreparationCountdown();
+      }catch(err){
+        console.error("Error loading questions:", err);
+        // Use mock questions as fallback
+        questions = generateMockQuestions(15);
+        generatePrizeLadder();
+        startPreparationCountdown();
+      }
+    }
+
+    function generateMockQuestions(count) {
+      const mockQuestions = [];
+      for (let i = 0; i < count; i++) {
+        mockQuestions.push({
+          question: `Sample question ${i+1}?`,
+          answers: [
+            { id: "A", text: "Answer A" },
+            { id: "B", text: "Answer B" },
+            { id: "C", text: "Answer C" },
+            { id: "D", text: "Answer D" }
+          ],
+          correct: "ABCD"[i % 4] // Rotate through A, B, C, D
+        });
+      }
+      return mockQuestions;
+    }
+
+    function startPreparationCountdown(){
+      playSound("soundDrumroll");
+      let count = 6;
+      const prep = document.getElementById("prepCountdown");
+      const modal = document.getElementById("prepModal");
+      prep.textContent = count;
+      
+      const interval = setInterval(() => {
+        count--;
+        prep.textContent = count;
+        if(count <= 0){
+          clearInterval(interval);
+          modal.classList.remove("active");
+          gameActive = true;
+          loadQuestion();
+          startTimer();
+        }
+      }, 1000);
+    }
+
+    function generatePrizeLadder(){
+      const ladder = document.getElementById("prizeLadder");
+      ladder.innerHTML = "";
+      for(let i = prizes.length - 1; i >= 0; i--){
+        const div = document.createElement("div");
+        div.className = "prize-item";
+        if(i === currentQuestion) div.classList.add("current");
+        if(safeHavens.includes(i)) div.classList.add("safe");
+        div.innerHTML = `<span class="prize-number">${i+1}</span><span class="prize-amount">${prizes[i]} OGMN</span>`;
+        ladder.appendChild(div);
+      }
+    }
+
+    function loadQuestion(){
+      if(currentQuestion >= questions.length){ 
+        endGame(true, prizes[currentQuestion-1]); 
+        return; 
+      }
+      
+      const q = questions[currentQuestion];
+      document.getElementById("questionNumber").textContent = `Question ${currentQuestion+1}`;
+      document.getElementById("questionText").textContent = q.question;
+      document.getElementById("currentQuestionDisplay").textContent = currentQuestion+1;
+      
+      const grid = document.getElementById("answersGrid");
+      grid.innerHTML = "";
+      
+      q.answers.forEach((ans, i) => {
+        const opt = document.createElement("div");
+        opt.className = "answer-option";
+        opt.onclick = () => selectAnswer(i);
+        opt.innerHTML = `<span class="answer-letter">${"ABCD"[i]}</span><span>${ans.text}</span>`;
+        grid.appendChild(opt);
+      });
+      
+      selectedAnswer = -1;
+    }
+
+    function startTimer(){
+      clearInterval(timerInterval);
+      timeLeft = 13;
+      document.getElementById("timer").textContent = timeLeft;
+      
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        document.getElementById("timer").textContent = timeLeft;
+        
+        if(timeLeft <= 0){ 
+          clearInterval(timerInterval); 
+          checkAnswer(-1); 
+        }
+      }, 1000);
+    }
+
+    function selectAnswer(i){
+      if(!gameActive) return;
+      selectedAnswer = i;
+      
+      document.querySelectorAll(".answer-option").forEach(opt => {
+        opt.classList.remove("selected");
+      });
+      
+      document.querySelectorAll(".answer-option")[i].classList.add("selected");
+      setTimeout(() => checkAnswer(i), 1000);
+    }
+
+    function checkAnswer(i){
+      if(!gameActive) return;
+      clearInterval(timerInterval); 
+      gameActive = false;
+      
+      const q = questions[currentQuestion];
+      const opts = document.querySelectorAll(".answer-option");
+      const correctIndex = ["A","B","C","D"].indexOf(q.correct);
+
+      if (correctIndex !== -1 && opts[correctIndex]) {
+        opts[correctIndex].classList.add("correct");
+      }
+
+      if(i !== -1 && i !== correctIndex && opts[i]){
+        opts[i].classList.add("incorrect");
+        playSound("soundWrong");
+      } else if(i === correctIndex){
+        playSound("soundCorrect");
+      }
+
+      setTimeout(() => {
+        if(i === correctIndex){
+          currentQuestion++;
+          if(currentQuestion >= questions.length) {
+            endGame(true, prizes[currentQuestion-1]);
+          } else { 
+            gameActive = true; 
+            generatePrizeLadder(); 
+            loadQuestion(); 
+            startTimer(); 
+          }
+        } else {
+          let winnings = 0;
+          if(currentQuestion > safeHavens[1]) winnings = prizes[safeHavens[1]];
+          else if(currentQuestion > safeHavens[0]) winnings = prizes[safeHavens[0]];
+          endGame(false, winnings);
+        }
+      }, 2000);
+    }
+
+    function endGame(won, winnings){
+      document.getElementById("modalPrize").textContent = winnings + " OGMN";
+      document.getElementById("modalTitle").textContent = won ? "Congratulations!" : "Game Over!";
+      document.getElementById("modalMessage").textContent = won 
+        ? "You've won the game!" 
+        : "Better luck next time!";
+      
+      let btns = "";
+      if(winnings > 0) btns += `<button class="modal-btn" onclick="withdrawWinnings(${winnings})">💰 Withdraw</button>`;
+      btns += `<button class="modal-btn" onclick="restartWithPayment()">Try Again</button>`;
+      btns += `<button class="modal-btn" onclick="goHome()">Main Menu</button>`;
+      
+      document.getElementById("modalButtons").innerHTML = btns;
+      document.getElementById("gameModal").classList.add("active");
+      
+      // Send game completion to server
+      fetch("/api/game/complete", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({wallet: userAddress, payout: winnings})
+      }).catch(err => console.error("Error sending game completion:", err));
+    }
+
+    async function withdrawWinnings(amount){ 
+      alert("✅ Simulated withdrawal of " + amount + " OGMN"); 
+    }
+    
+    function restartWithPayment(){ 
+      window.location.href = "/paystart"; 
+    }
+    
+    function goHome(){ 
+      window.location.href = "/home"; 
+    }
+
+    // ------------------------ LIFELINES ------------------------
+    function useLifeline(type){
+      if(usedLifelines[type]){ 
+        alert("❌ Already used this lifeline!"); 
+        return; 
+      }
+      
+      if(type === "fifty"){ 
+        fiftyFifty(); 
+      }
+      if(type === "phone"){ 
+        alert("📞 Your friend thinks the answer is option " + questions[currentQuestion].correct); 
+      }
+      if(type === "audience"){ 
+        playSound("soundAudience"); 
+        showAudiencePoll(); 
+      }
+      
+      usedLifelines[type] = true;
+      document.getElementById(type + "Lifeline").classList.add("used");
+    }
+
+    function fiftyFifty(){
+      const q = questions[currentQuestion];
+      const correctIndex = ["A","B","C","D"].indexOf(q.correct);
+      const wrong = [0,1,2,3].filter(x => x !== correctIndex);
+      wrong.sort(() => 0.5 - Math.random());
+      
+      wrong.slice(0,2).forEach(i => {
+        const node = document.querySelectorAll(".answer-option")[i];
+        if (node) node.style.visibility = "hidden";
+      });
+    }
+
+    function showAudiencePoll(){
+      const modal = document.getElementById("audienceModal");
+      modal.classList.add("active");
+      
+      const correctIndex = ["A","B","C","D"].indexOf(questions[currentQuestion].correct);
+      const perc = [0,0,0,0];
+      perc[correctIndex] = Math.floor(50 + Math.random() * 30);
+      
+      let remain = 100 - perc[correctIndex];
+      const wrong = [0,1,2,3].filter(x => x !== correctIndex);
+      
+      wrong.forEach((w, i) => { 
+        perc[w] = i === wrong.length - 1 ? remain : Math.floor(Math.random() * remain); 
+        remain -= perc[w]; 
+      });
+      
+      ["A","B","C","D"].forEach((l, i) => {
+        const bar = document.getElementById("bar" + l);
+        bar.style.height = "0%";
+        setTimeout(() => { 
+          bar.style.height = perc[i] + "%"; 
+          bar.textContent = perc[i] + "%"; 
+        }, 120);
+      });
+    }
+
+    function closeAudiencePoll(){ 
+      document.getElementById("audienceModal").classList.remove("active"); 
+    }
+
+    // ------------------------ WALLET ------------------------
+    async function connectWallet(){
+      if(!window.ethereum){ 
+        alert("Please install MetaMask or another Ethereum wallet!"); 
+        return; 
+      }
+      
+      try {
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        userAddress = await signer.getAddress();
+        localStorage.setItem("wallet", userAddress);
+        updateWalletUI();
+      } catch (error) {
+        console.error("Error connecting wallet:", error);
+        alert("Failed to connect wallet: " + error.message);
+      }
+    }
+
+    function disconnectWallet(){
+      localStorage.removeItem("wallet");
+      userAddress = null;
+      updateWalletUI();
+      window.location.href = "/home";
+    }
+
+    function updateWalletUI(){
+      const btn = document.getElementById("connectWalletBtn");
+      const walletContainer = document.getElementById("walletContainer");
+      
+      if(userAddress){
+        const truncated = `${userAddress.substring(0, 6)}...${userAddress.substring(userAddress.length - 4)}`;
+        btn.textContent = `✅ ${truncated}`;
+        btn.onclick = () => walletContainer.classList.toggle("active");
+      } else {
+        btn.textContent = "🔌 Connect Wallet";
+        btn.onclick = connectWallet;
+      }
+    }
+
+    // Initialize the page
+    document.addEventListener("DOMContentLoaded", () => {
+      // Set up wallet functionality
+      const wallet = localStorage.getItem("wallet");
+      if(wallet) userAddress = wallet;
+      updateWalletUI();
+      
+      document.getElementById("connectWalletBtn").addEventListener("click", function(e) {
+        e.stopPropagation();
+        if (!userAddress) {
+          connectWallet();
+        } else {
+          document.getElementById("walletContainer").classList.toggle("active");
+        }
+      });
+      
+      document.getElementById("disconnectBtn").addEventListener("click", disconnectWallet);
+      
+      // Close dropdown when clicking outside
+      document.addEventListener("click", (e) => {
+        const walletContainer = document.getElementById("walletContainer");
+        if (!walletContainer.contains(e.target)) {
+          walletContainer.classList.remove("active");
+        }
+      });
+      
+      // Start the game
+      initGame();
+    });
+  </script>
+</body>
+</html>

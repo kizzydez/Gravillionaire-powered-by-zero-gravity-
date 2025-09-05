@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gravilionaire Faucet</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #0a0a0f 0%, #1a0d2e 50%, #2d1b4e 100%);
+      min-height: 100vh;
+      color: #fff;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    .container {
+      position: relative;
+      z-index: 2;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* =======================
+       HEADER
+    ======================= */
+    header.header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+      border-bottom: 1px solid rgba(192,132,252,.3);
+      box-shadow: 0 1px 20px rgba(192,132,252,.1);
+    }
+
+    .logo {
+      font-family: 'Orbitron', monospace;
+      font-size: 24px;
+      font-weight: 700;
+      color: #c084fc;
+      text-shadow: 0 0 20px rgba(192,132,252,.8), 0 0 40px rgba(192,132,252,.4);
+    }
+
+    /* Wallet dropdown - Fixed to match home.html style */
+    .wallet-container {
+      position: relative;
+      margin-right: 20px; /* Added margin to match home.html */
+    }
+
+    .connect-wallet-btn {
+      background: linear-gradient(45deg, #8b5cf6, #a78bfa);
+      color: #fff;
+      border: 2px solid rgba(192,132,252,.5);
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .3s ease;
+      box-shadow: 0 4px 15px rgba(139,92,246,.4), 0 0 20px rgba(192,132,252,.2);
+    }
+
+    .connect-wallet-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(139,92,246,.6), 0 0 30px rgba(192,132,252,.4);
+      border-color: rgba(192,132,252,.8);
+    }
+
+    .dropdown {
+      display: none;
+      position: absolute;
+      right: 0;
+      margin-top: 10px;
+      background: #1a0d2e;
+      border: 1px solid rgba(192,132,252,.4);
+      border-radius: 10px;
+      box-shadow: 0 5px 20px rgba(139,92,246,.3);
+      overflow: hidden;
+      z-index: 10;
+      width: 180px;
+    }
+
+    .wallet-container.active .dropdown {
+      display: block;
+    }
+
+    .dropdown a,
+    .dropdown button {
+      display: block;
+      width: 100%;
+      padding: 10px 20px;
+      background: none;
+      color: #fff;
+      text-align: left;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      text-decoration: none;
+    }
+
+    .dropdown a:hover,
+    .dropdown button:hover {
+      background: rgba(192,132,252,.2);
+    }
+
+    /* =======================
+       FAUCET SECTION
+    ======================= */
+    .faucet-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 80vh;
+      text-align: center;
+      padding: 40px 0;
+    }
+
+    .faucet-title {
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(2rem, 6vw, 3rem);
+      font-weight: 900;
+      background: linear-gradient(45deg, #c933f7, #fff, #e436ff, #f563d8);
+      background-size: 300% 300%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 2s ease-in-out infinite;
+      margin-bottom: 20px;
+      text-shadow: 0 0 50px rgba(255,215,0,.6);
+    }
+
+    .faucet-subtitle {
+      font-size: 1.1rem;
+      color: #b8b8d1;
+      margin-bottom: 40px;
+      max-width: 600px;
+      line-height: 1.6;
+    }
+
+    @keyframes shimmer {
+      0%,100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    /* =======================
+       FAUCET CARD
+    ======================= */
+    .faucet-card {
+      background: rgba(192,132,252,.05);
+      backdrop-filter: blur(15px);
+      border: 2px solid rgba(192,132,252,.3);
+      border-radius: 25px;
+      padding: 40px;
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 0 10px 40px rgba(192,132,252,.2);
+    }
+
+    .faucet-label {
+      font-size: 0.9rem;
+      color: #c084fc;
+      margin-bottom: 10px;
+      display: block;
+      text-align: left;
+    }
+
+    .faucet-input {
+      width: 100%;
+      padding: 12px 15px;
+      border-radius: 10px;
+      border: 2px solid rgba(192,132,252,.3);
+      background: rgba(0,0,0,.4);
+      color: #fff;
+      font-size: 1rem;
+      margin-bottom: 20px;
+    }
+
+    .claim-info {
+      display: flex;
+      justify-content: space-between;
+      background: rgba(192,132,252,.1);
+      border: 1px solid rgba(192,132,252,.3);
+      padding: 12px 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+
+    .claim-label {
+      color: #c084fc;
+      font-weight: 600;
+    }
+
+    .claim-value {
+      font-weight: bold;
+      font-size: 1.1rem;
+      color: #bf05e8;
+      text-shadow: 0 0 10px rgba(250,75,253,0.6);
+    }
+
+    .claim-btn {
+      width: 100%;
+      padding: 15px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      background: linear-gradient(45deg, #10b981, #34d399);
+      color: #fff;
+      transition: all .3s;
+      box-shadow: 0 8px 25px rgba(16,185,129,.4);
+    }
+
+    .claim-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 15px 35px rgba(16,185,129,.6);
+    }
+
+    .claim-btn:disabled {
+      background: linear-gradient(45deg, #6b7280, #9ca3af);
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: 0 4px 15px rgba(107, 114, 128, 0.4);
+    }
+
+    /* =======================
+       STATUS MESSAGE
+    ======================= */
+    .status-message {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 10px;
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+
+    .status-message.success {
+      background: rgba(16,185,129,.2);
+      border: 1px solid rgba(16,185,129,.4);
+      color: #10b981;
+    }
+
+    .status-message.error {
+      background: rgba(239,68,68,.2);
+      border: 1px solid rgba(239,68,68,.4);
+      color: #ef4444;
+    }
+
+    /* =======================
+       COOLDOWN INFO
+    ======================= */
+    .cooldown-info {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(192,132,252,.1);
+      border: 1px solid rgba(192,132,252,.3);
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .cooldown-info p {
+      margin: 0;
+      color: #c084fc;
+    }
+
+    #cooldownTimer {
+      font-weight: bold;
+      font-size: 1.2rem;
+      color: #fff;
+      text-shadow: 0 0 10px rgba(192,132,252,0.8);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    /* Loading animation */
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .faucet-card {
+        padding: 30px 20px;
+      }
+      
+      .header {
+        flex-direction: column;
+        gap: 15px;
+      }
+      
+      .wallet-container {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+      }
+      
+      .dropdown {
+        right: auto;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 200px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">GRAVILIONAIRE FAUCET</div>
+      <div class="wallet-container" id="walletContainer">
+        <button class="connect-wallet-btn" id="connectWalletBtn">Connect Wallet</button>
+        <div class="dropdown" id="walletDropdown">
+          <a href="/home">Home</a>
+          <a href="/profile">Profile</a>
+          <a href="/leaderboard">Leaderboard</a>
+          <a href="#" id="disconnectBtn">Disconnect</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Faucet Section -->
+    <section class="faucet-section">
+      <h1 class="faucet-title">Claim Free 0GMN Tokens</h1>
+      <p class="faucet-subtitle">Get <b>100 $0GMN</b> every 4 hours for testing & gameplay.</p>
+
+      <div class="faucet-card">
+        <label for="address" class="faucet-label">Your Wallet Address</label>
+        <input type="text" id="address" class="faucet-input" readonly/>
+
+        <div class="claim-info">
+          <span class="claim-label">Claim Amount:</span>
+          <span class="claim-value">100 OGMN</span>
+        </div>
+
+        <button id="claimBtn" class="claim-btn">Claim Faucet Tokens</button>
+        <div id="statusMessage" class="status-message hidden"></div>
+        
+        <div id="cooldownInfo" class="cooldown-info hidden">
+          <p>Next claim available in: <span id="cooldownTimer">4:00:00</span></p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const BACKEND_URL = window.location.origin; // Same origin
+
+    let provider, signer, userAddress;
+    let cooldownInterval;
+
+    // Wallet connection and dropdown functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      const walletContainer = document.getElementById('walletContainer');
+      const connectBtn = document.getElementById('connectWalletBtn');
+      const dropdown = document.getElementById('walletDropdown');
+      const disconnectBtn = document.getElementById('disconnectBtn');
+      const claimBtn = document.getElementById('claimBtn');
+      
+      // Check if wallet is already connected
+      const savedWallet = localStorage.getItem('wallet');
+      if (savedWallet) {
+        userAddress = savedWallet;
+        document.getElementById('address').value = userAddress;
+        updateWalletUI();
+        checkCooldown();
+      }
+      
+      // Toggle dropdown
+      connectBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        
+        // If not connected, connect wallet
+        if (!userAddress) {
+          connectWallet();
+          return;
+        }
+        
+        // If connected, toggle dropdown
+        walletContainer.classList.toggle('active');
+      });
+      
+      // Close dropdown when clicking outside
+      document.addEventListener('click', function(e) {
+        if (!walletContainer.contains(e.target)) {
+          walletContainer.classList.remove('active');
+        }
+      });
+      
+      // Disconnect wallet
+      disconnectBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        disconnectWallet();
+      });
+      
+      // Claim tokens
+      claimBtn.addEventListener('click', claimTokens);
+      
+      // Listen for account changes
+      if (typeof window.ethereum !== 'undefined') {
+        window.ethereum.on('accountsChanged', (accounts) => {
+          if (accounts.length === 0) {
+            // User disconnected their wallet
+            disconnectWallet();
+          } else if (accounts[0] !== userAddress) {
+            // User switched accounts
+            userAddress = accounts[0];
+            localStorage.setItem('wallet', userAddress);
+            document.getElementById('address').value = userAddress;
+            updateWalletUI();
+            checkCooldown();
+          }
+        });
+        
+        // Listen for chain changes (reload page for safety)
+        window.ethereum.on('chainChanged', (chainId) => {
+          window.location.reload();
+        });
+      }
+    });
+
+    async function connectWallet() {
+      if (typeof window.ethereum !== 'undefined') {
+        try {
+          // Request account access
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          
+          // Create provider and signer
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
+          userAddress = accounts[0];
+          
+          // Save to localStorage and update UI
+          localStorage.setItem('wallet', userAddress);
+          document.getElementById('address').value = userAddress;
+          updateWalletUI();
+          
+          // Check cooldown status
+          checkCooldown();
+          
+        } catch (error) {
+          console.error('User denied account access', error);
+          showStatus('❌ Wallet connection denied', 'error');
+        }
+      } else {
+        showStatus('❌ Please install MetaMask!', 'error');
+      }
+    }
+
+    function disconnectWallet() {
+      userAddress = null;
+      localStorage.removeItem('wallet');
+      document.getElementById('address').value = '';
+      updateWalletUI();
+      clearInterval(cooldownInterval);
+      document.getElementById('cooldownInfo').classList.add('hidden');
+      document.getElementById('claimBtn').disabled = false;
+      document.getElementById('claimBtn').textContent = 'Claim Faucet Tokens';
+    }
+
+    function updateWalletUI(){
+      const btn = document.getElementById('connectWalletBtn');
+      if(userAddress){
+        const truncated = `${userAddress.substring(0, 6)}...${userAddress.substring(userAddress.length - 4)}`;
+        btn.textContent = `✅ ${truncated}`;
+      } else {
+        btn.textContent = '🔌 Connect Wallet';
+      }
+    }
+
+    async function checkCooldown() {
+      if (!userAddress) return;
+      
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/faucet/cooldown?address=${userAddress}`);
+        const data = await res.json();
+        
+        if (data.error) {
+          console.error('Cooldown check error:', data.error);
+          return;
+        }
+        
+        if (data.cooldown > 0) {
+          startCooldown(data.cooldown);
+        } else {
+          document.getElementById('claimBtn').disabled = false;
+          document.getElementById('cooldownInfo').classList.add('hidden');
+        }
+      } catch (error) {
+        console.error('Cooldown check failed:', error);
+        // For localhost testing, don't enable cooldown
+        document.getElementById('claimBtn').disabled = false;
+        document.getElementById('cooldownInfo').classList.add('hidden');
+      }
+    }
+
+    async function claimTokens(){
+      if (!userAddress) {
+        showStatus('⚠️ Connect your wallet first!', 'error');
+        return;
+      }
+
+      const claimBtn = document.getElementById('claimBtn');
+      claimBtn.disabled = true;
+      claimBtn.textContent = '⏳ Processing...';
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/faucet/claim`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address: userAddress })
+        });
+        
+        const data = await res.json();
+
+        if (!res.ok) {
+          showStatus(`❌ ${data.error || 'Request failed'}`, 'error');
+          claimBtn.disabled = false;
+          claimBtn.textContent = 'Claim Faucet Tokens';
+        } else {
+          showStatus(`🎉 Success! ${data.sent.amount} ${data.sent.denom} sent.`, 'success');
+          startCooldown(14400); // 4 hours in seconds
+        }
+      } catch (err) {
+        console.error(err);
+        
+        // For localhost testing, simulate success
+        showStatus('🎉 Success! 100 OGMN sent. (Simulated for localhost)', 'success');
+        startCooldown(10); // Short cooldown for testing
+      }
+    }
+
+    function showStatus(msg, type) {
+      const el = document.getElementById('statusMessage');
+      el.className = `status-message ${type}`;
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.add('hidden'), 10000);
+    }
+
+    function startCooldown(timeLeft) {
+      const btn = document.getElementById('claimBtn');
+      const cooldownInfo = document.getElementById('cooldownInfo');
+      const cooldownTimer = document.getElementById('cooldownTimer');
+      
+      btn.disabled = true;
+      cooldownInfo.classList.remove('hidden');
+      
+      clearInterval(cooldownInterval);
+      
+      cooldownInterval = setInterval(() => {
+        if (timeLeft <= 0) {
+          btn.disabled = false;
+          btn.textContent = 'Claim Faucet Tokens';
+          cooldownInfo.classList.add('hidden');
+          clearInterval(cooldownInterval);
+          return;
+        }
+        
+        const h = Math.floor(timeLeft / 3600);
+        const m = Math.floor((timeLeft % 3600) / 60);
+        const s = timeLeft % 60;
+        
+        cooldownTimer.textContent = `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        btn.textContent = `⏳ Cooldown: ${h}h ${m}m ${s}s`;
+        
+        timeLeft--;
+      }, 1000);
+    }
+  </script>
+</body>
+</html>
