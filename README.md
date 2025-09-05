@@ -30,8 +30,8 @@ Gravilionaire is a blockchain (Built on gravity)-based quiz game where players c
 1. **Clone the repository**
 
    ```bash
-   git clone <your-repository-url>
-   cd Github-GRAVillionaire
+   gh repo clone kizzydez/Gravillionaire-powered-by-zero-gravity-
+   cd Gravillionaire-powered-by-zero-gravity
 
 ## Setup
 
@@ -74,3 +74,4 @@ View your stats on the Profile page
 ## License
 
 MIT
+
